@@ -1,62 +1,45 @@
 # SentinelOps
 
-Autonomous IT Infrastructure Monitoring and Incident Response Platform.
-A DevOps-lifecycle demonstration project: React frontend, Node/Express + MySQL
-backend, with Docker/Jenkins/Terraform/Ansible to follow once this layer is solid.
+React/Vite dashboard, Express API, and MySQL for infrastructure metrics, incidents, and alerts.
 
-```
-SentinelOps/
-|-- frontend/     React + Vite dashboard (DONE - see frontend/README.md)
-|-- backend/      Express REST API (DONE - see backend/README.md)
-|-- database/     schema.sql - run this first
-|-- deployment/   placeholder for the DevOps phase (Docker, Jenkins, Terraform, Ansible)
-```
+## Sprint 4–5 monitoring
 
-## Run it locally (both halves)
+Follow the [two-PC agent setup and failure demo](monitoring-agent/README.md) after starting the stack. The backend applies the additive [monitoring schema](backend/src/config/monitoring.sql) at startup, including on an existing Sprint 1–2 database. The app database account needs table creation privileges. This new project starts with a separate Compose volume by default.
 
-**1. Database** - install MySQL 8, then:
-```bash
-mysql -u root -p -e "
-CREATE DATABASE sentinelops_db;
-CREATE USER 'sentinelops'@'localhost' IDENTIFIED BY 'your_password_here';
-GRANT ALL PRIVILEGES ON sentinelops_db.* TO 'sentinelops'@'localhost';
-FLUSH PRIVILEGES;"
-mysql -u sentinelops -p sentinelops_db < database/schema.sql
-```
+## Run with Docker Compose
 
-**2. Backend**
-```bash
-cd backend
-cp .env.example .env      # fill in your DB password + a JWT secret
-npm install
-npm run seed              # loads the 8 servers / 5 apps / incidents / alerts / 5 users
-npm run dev                # http://localhost:5000
-```
+1. Start Docker Desktop in Linux container mode, or use Docker Engine with the Compose plugin on Linux.
+2. Use the root `.env` if one was supplied. For a new checkout, copy `.env.example` to `.env`, set distinct random values for the three secrets, and set the first account's email and password. Use at least 12 characters and at most 72 bytes for the account password. Keep `.env` private.
+3. From the repository root:
 
-**3. Frontend** (new terminal)
-```bash
-cd frontend
-npm install
-npm run dev                # http://localhost:5173
-```
+   ```powershell
+   docker compose config --quiet
+   docker compose up -d --build
+   docker compose ps
+   curl.exe -f http://localhost:8080/api/ready
+   ```
 
-Sign in with `devops@sentinelops.io` / `devops123` (see `backend/README.md` for
-every demo account).
+4. Open [http://localhost:8080](http://localhost:8080) and sign in with `BOOTSTRAP_EMAIL` and `BOOTSTRAP_PASSWORD` from `.env`. The backend creates the first account on an empty users table. Changing those variables later does not reset the account's password.
 
-## What's live vs. simulated right now
+Nginx publishes the dashboard and forwards `/api/` to Express on the internal network. MySQL is internal to Compose. By default the web port is bound to localhost. To use an approved lab network, set `BIND_ADDRESS` in `.env` to the lab host's LAN IP and open the configured `APP_PORT` on that host's firewall for lab clients.
 
-| | Status |
-| --- | --- |
-| Login, JWT sessions | **Real** - MySQL + bcrypt + JWT |
-| Servers, applications, incidents, alerts, users, settings | **Real** - every page reads/writes actual MySQL rows through the API, polled every 5s |
-| Dashboard chart history | **Real** - `metrics` table, seeded with a day of history |
-| "Simulate Failure" | **Real** - writes a real incident + alert + server status change, used as a manual stand-in for detection |
-| Continuous real-world CPU/memory/disk readings | **Not yet** - that's the monitoring agent, the next phase. `POST /api/metrics` is built and tested; nothing calls it on a schedule yet |
+MySQL loads [the schema](database/schema.sql) during initialization of a new `mysql_data` volume. Normal restarts and `docker compose down` keep that volume. `docker compose down -v` deletes it. Schema changes and password rotations on an existing volume require database operations because initialization does not rerun.
 
-## Project status
+### Optional lab demo data
 
-- [x] Frontend (v3): single DevOps Engineer role, 8 servers across 3 tiers, 5 applications
-- [x] Backend: Express + MySQL, JWT auth, full CRUD for every module
-- [x] Frontend <-> backend wired together, mock data removed
-- [ ] Monitoring agent (real CPU/memory/disk collection)
-- [ ] Docker, Jenkins, Terraform, Ansible, Kubernetes/Prometheus (optional)
+A fresh database starts with the first account and an empty dashboard. For an isolated demo with both monitoring tokens unset and no monitoring history, `docker compose exec backend node src/scripts/seed.js` replaces **all** app data and accounts with fixtures, including known demo passwords. Sign in using the accounts in the [backend README](backend/README.md) after seeding. Use this only on a disposable database.
+
+### Check the stack
+
+- Check `docker compose ps` for three healthy services and `/api/ready` for a successful database check.
+- Sign in and open Dashboard, Infrastructure, Incidents, and Alerts. Reload a nested page directly.
+- With demo data, simulate a failure on a server without an open incident, acknowledge its alert, and resolve its incident.
+- Run `docker compose restart`, wait for readiness, and verify that those changes remain.
+
+For startup failures, run `docker compose logs --tail=100 db backend frontend`.
+
+## Run outside Docker
+
+Prepare MySQL and `backend/.env` using the [backend instructions](backend/README.md), then run `npm ci` and `npm run dev` in `backend/`. In another terminal, run `npm ci` and `npm run dev` in `frontend/` and open [http://localhost:5173](http://localhost:5173). Vite forwards `/api/` to port 5000. For a different backend address, copy `frontend/.env.example` to `frontend/.env` and set `API_PROXY_TARGET`.
+
+The legacy metric API and manual simulation remain available for demo servers. Lab hosts send readings through the authenticated monitoring API.

@@ -4,7 +4,7 @@ import axios from 'axios'
 const TOKEN_KEY = 'sentinelops_token'
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api',
 })
 
 // Attach the JWT (if we have one) to every request automatically.

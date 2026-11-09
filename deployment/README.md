@@ -1,8 +1,3 @@
-# deployment/
+# Deployment
 
-Placeholder for the DevOps Implementation phase, per the backend blueprint's
-"Important Development Rule": Docker, Jenkins, Terraform and Ansible come
-*after* frontend + backend + database are complete and working together.
-
-That milestone is done (see the root README's Project Status). This folder is
-intentionally empty until that phase starts.
+The root [README](../README.md) describes the Docker Compose setup and verification steps. The stack definition is [compose.yaml](../compose.yaml). Nginx routing is in [frontend/nginx.conf](../frontend/nginx.conf).

@@ -1,7 +1,9 @@
 const { pool } = require('../config/database')
 
 async function findAll() {
-  const [rows] = await pool.query('SELECT * FROM servers ORDER BY id')
+  const [rows] = await pool.query(
+    "SELECT s.*, DATE_FORMAT(h.last_seen, '%Y-%m-%dT%H:%i:%s.%fZ') AS last_seen FROM servers s LEFT JOIN monitor_hosts h ON h.server_id = s.id ORDER BY s.id",
+  )
   return rows
 }
 

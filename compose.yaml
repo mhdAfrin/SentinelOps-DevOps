@@ -1,0 +1,60 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sentinelops_db
+      MYSQL_USER: "${DB_USER:-sentinelops}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MYSQL_ROOT_HOST: localhost
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql --protocol=TCP -h 127.0.0.1 -u \"$$MYSQL_USER\" \"$$MYSQL_DATABASE\" -e 'SELECT 1 FROM settings LIMIT 1'"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: sentinelops_db
+      DB_USER: "${DB_USER:-sentinelops}"
+      DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env}"
+      BOOTSTRAP_EMAIL: "${BOOTSTRAP_EMAIL:-}"
+      BOOTSTRAP_PASSWORD: "${BOOTSTRAP_PASSWORD:-}"
+      MONITOR_PC1_TOKEN: "${MONITOR_PC1_TOKEN:-}"
+      MONITOR_PC2_TOKEN: "${MONITOR_PC2_TOKEN:-}"
+      MONITOR_OFFLINE_SECONDS: "${MONITOR_OFFLINE_SECONDS:-90}"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

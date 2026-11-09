@@ -3,7 +3,7 @@ import { api, apiErrorMessage } from '../services/api'
 import { useAuth } from './AuthContext'
 
 const DataContext = createContext(null)
-export const DEFAULT_THRESHOLDS = { cpuWarning: 80, cpuCritical: 90, memWarning: 80 }
+export const DEFAULT_THRESHOLDS = { cpuWarning: 80, cpuCritical: 90, memWarning: 80, memCritical: 90, diskWarning: 80, diskCritical: 90 }
 const POLL_MS = 5000 // how often we re-pull live data from the backend
 
 export function DataProvider({ children }) {
@@ -75,7 +75,7 @@ export function DataProvider({ children }) {
   }, [servers])
 
   const activeIncidents = incidents.filter((i) => i.status !== 'Resolved')
-  const openAlerts = alerts.filter((a) => a.status !== 'Acknowledged')
+  const openAlerts = alerts.filter((a) => a.status === 'Active')
 
   // ----- Incident actions -----
   async function updateIncident(id, patch) {
@@ -165,6 +165,7 @@ function normalizeServer(s) {
     ip: s.ip_address,
     type: s.server_type,
     status: s.status.toLowerCase(),
+    lastSeen: s.last_seen,
     cpu: Number(s.cpu_usage),
     mem: Number(s.memory_usage),
     disk: Number(s.disk_usage),
@@ -184,6 +185,7 @@ function normalizeApp(a) {
 function normalizeIncident(i) {
   return {
     id: i.id,
+    automatic: i.id.startsWith('MON-'),
     title: i.title,
     source: i.source,
     serverId: i.server_id,

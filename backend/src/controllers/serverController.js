@@ -2,6 +2,7 @@ const serverModel = require('../models/serverModel')
 const incidentModel = require('../models/incidentModel')
 const alertModel = require('../models/alertModel')
 const settingsModel = require('../models/settingsModel')
+const { hasHost } = require('../services/monitorRules')
 
 // Task 8: GET /api/servers
 async function list(req, res, next) {
@@ -19,6 +20,7 @@ async function list(req, res, next) {
 async function simulateFailure(req, res, next) {
   try {
     const { id } = req.params
+    if (hasHost(id)) return res.status(409).json({ error: 'Failure simulation is available only for demo servers.' })
     const server = await serverModel.findById(id)
     if (!server) return res.status(404).json({ success: false, error: `Unknown server "${id}".` })
 

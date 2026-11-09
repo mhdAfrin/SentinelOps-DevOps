@@ -4,6 +4,7 @@
 require('dotenv').config()
 const bcrypt = require('bcrypt')
 const { pool } = require('../config/database')
+const { initializeMonitoring } = require('../services/monitoring')
 
 function hoursAgo(h, m = 0, daysAgo = 0) {
   const d = new Date()
@@ -40,6 +41,12 @@ const APPS = [
 ]
 
 async function run() {
+  if (process.env.MONITOR_PC1_TOKEN || process.env.MONITOR_PC2_TOKEN) {
+    throw new Error('Disable monitoring tokens before seeding an isolated demo database.')
+  }
+  await initializeMonitoring()
+  const [[{ monitored }]] = await pool.query('SELECT EXISTS (SELECT 1 FROM monitor_hosts) OR EXISTS (SELECT 1 FROM monitor_probes) AS monitored')
+  if (monitored) throw new Error('Use a separate demo database. This database contains monitoring history.')
   const conn = await pool.getConnection()
   try {
     console.log('Clearing existing data...')

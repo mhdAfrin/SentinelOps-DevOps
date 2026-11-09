@@ -17,12 +17,13 @@ export default function Alerts() {
   const [filter, setFilter] = useState('active')
 
   const rows = alerts
-    .filter((a) => (filter === 'all' ? true : filter === 'active' ? a.status === 'Active' : a.status === 'Acknowledged'))
+    .filter(a => filter === 'all' || a.status.toLowerCase() === filter)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
   const tabs = [
     { value: 'active', label: 'Active', count: openAlerts.length },
-    { value: 'acknowledged', label: 'Acknowledged', count: alerts.length - openAlerts.length },
+    { value: 'acknowledged', label: 'Acknowledged', count: alerts.filter(a => a.status === 'Acknowledged').length },
+    { value: 'resolved', label: 'Resolved', count: alerts.filter(a => a.status === 'Resolved').length },
     { value: 'all', label: 'All', count: alerts.length },
   ]
 
@@ -52,8 +53,8 @@ export default function Alerts() {
                   </span>
                 </div>
                 <SeverityBadge level={a.severity} />
-                {a.status === 'Acknowledged' ? (
-                  <span className="muted">Acknowledged</span>
+                {a.status !== 'Active' ? (
+                  <span className="muted">{a.status}</span>
                 ) : (
                   <button className="btn btn--sm" onClick={() => acknowledgeAlert(a.id)}>
                     Acknowledge
