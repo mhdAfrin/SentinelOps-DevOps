@@ -127,12 +127,14 @@ export default function Incidents() {
                       : `Open ${formatMinutes(minutesBetween(i.createdAt, now.toISOString()))}`}
                   </td>
                   <td>
-                    <button
+                    {i.automatic && i.status !== 'Open' ? (
+                      <span className="muted">{i.status === 'Resolved' ? 'Auto-resolved' : 'Waiting for recovery'}</span>
+                    ) : <button
                       className={`btn btn--sm ${i.status === 'Investigating' ? 'btn--good' : i.status === 'Open' ? 'btn--primary' : ''}`}
                       onClick={() => advance(i)}
                     >
                       {actionLabel[i.status]}
-                    </button>
+                    </button>}
                   </td>
                 </tr>
               ))}

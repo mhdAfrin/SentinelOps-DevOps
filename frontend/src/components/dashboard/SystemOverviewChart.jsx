@@ -24,25 +24,28 @@ function ChartTip({ active, payload, label }) {
   )
 }
 
-// Dashboard "System Performance Graphs": CPU / Memory / Disk usage over time,
-// averaged across all 8 servers from real rows in the `metrics` table
-// (GET /api/metrics/series).
+// CPU, memory and disk history from registered host agents.
 export default function SystemOverviewChart() {
   const [range, setRange] = useState('24h')
   const [data, setData] = useState([])
 
   useEffect(() => {
     let cancelled = false
-    api
-      .get('/metrics/series', { params: { range } })
-      .then(({ data }) => {
+    let timer
+    async function poll() {
+      try {
+        const { data } = await api.get('/metrics/series', { params: { range, live: 1 } })
         if (!cancelled) setData(data)
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setData([])
-      })
+      } finally {
+        if (!cancelled) timer = setTimeout(poll, 5000)
+      }
+    }
+    poll()
     return () => {
       cancelled = true
+      clearTimeout(timer)
     }
   }, [range])
 
@@ -77,7 +80,7 @@ export default function SystemOverviewChart() {
   )
 
   return (
-    <Card title={`System Performance (Last ${range === '24h' ? '24 Hours' : '7 Days'})`} right={legend}>
+    <Card title={`Live Host Metrics (Last ${range === '24h' ? '24 Hours' : '7 Days'})`} right={legend}>
       <div className="chart-tools">{rangeSwitch}</div>
       <div className="chart-box">
         {data.length === 0 ? (
@@ -88,7 +91,8 @@ export default function SystemOverviewChart() {
               <CartesianGrid stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="label"
-                interval={range === '24h' ? 3 : 0}
+                interval="preserveStartEnd"
+                minTickGap={32}
                 tickLine={false}
                 axisLine={false}
                 tick={{ fill: 'var(--text-3)', fontSize: 12 }}
@@ -110,7 +114,7 @@ export default function SystemOverviewChart() {
                   name={s.name}
                   stroke={s.color}
                   strokeWidth={2.2}
-                  dot={false}
+                  dot={data.length === 1}
                   activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }}
                 />
               ))}

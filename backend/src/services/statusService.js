@@ -1,11 +1,13 @@
-// Same rule the frontend used in its simulated version (DataContext.jsx):
-// CPU >= critical -> Critical; CPU >= warning OR memory >= warning -> Warning;
-// otherwise Healthy. Disk has no configured threshold (Settings Module only
-// defines CPU Warning/Critical and Memory Warning).
-function computeStatus({ cpu_usage, memory_usage }, thresholds) {
-  if (cpu_usage >= thresholds.cpuCritical) return 'Critical'
-  if (cpu_usage >= thresholds.cpuWarning || memory_usage >= thresholds.memWarning) return 'Warning'
-  return 'Healthy'
+const { severityFor } = require('./monitorRules')
+
+function computeStatus({ cpu_usage, memory_usage, disk_usage }, thresholds) {
+  const readings = [
+    severityFor(cpu_usage, thresholds.cpuWarning, thresholds.cpuCritical),
+    severityFor(memory_usage, thresholds.memWarning, thresholds.memCritical),
+    severityFor(disk_usage, thresholds.diskWarning, thresholds.diskCritical),
+  ]
+  if (readings.includes('Critical')) return 'Critical'
+  return readings.includes('Warning') ? 'Warning' : 'Healthy'
 }
 
 module.exports = { computeStatus }

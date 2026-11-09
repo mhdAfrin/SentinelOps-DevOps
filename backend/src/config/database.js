@@ -1,25 +1,21 @@
-// Task 5: Connect MySQL with backend.
-// A pooled mysql2 connection, exported so every model can reuse it.
 const mysql = require('mysql2/promise')
-require('dotenv').config()
+require('dotenv').config({ quiet: true })
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  database: process.env.DB_NAME || 'sentinelops_db',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  dateStrings: true, // return DATETIME columns as plain strings, not JS Date objects
+  connectTimeout: 3000,
+  dateStrings: true,
 })
 
-// Fails fast and loudly if the database is unreachable, instead of letting
-// every route silently time out.
 async function verifyConnection() {
-  const conn = await pool.getConnection()
-  await conn.ping()
-  conn.release()
+  await pool.query({ sql: 'SELECT 1 FROM settings LIMIT 1', timeout: 3000 })
 }
 
 module.exports = { pool, verifyConnection }

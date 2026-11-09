@@ -1,8 +1,5 @@
 const settingsModel = require('../models/settingsModel')
 
-// Settings Module: Alert Threshold Settings (added API - not in the
-// blueprint's task list, but the thresholds have to be readable/writable
-// from somewhere for Settings.jsx and the future monitoring engine).
 async function get(req, res, next) {
   try {
     res.json(await settingsModel.getThresholds())
@@ -13,11 +10,10 @@ async function get(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { cpuWarning, cpuCritical, memWarning } = req.body
-    if (cpuWarning !== undefined && cpuCritical !== undefined && Number(cpuWarning) >= Number(cpuCritical)) {
-      return res.status(400).json({ success: false, error: 'cpuWarning must be lower than cpuCritical.' })
-    }
-    res.json(await settingsModel.setThresholds({ cpuWarning, cpuCritical, memWarning }))
+    const changes = Object.fromEntries(
+      Object.entries(req.body ?? {}).filter(([key]) => Object.hasOwn(settingsModel.DEFAULTS, key)),
+    )
+    res.json(await settingsModel.setThresholds(changes))
   } catch (err) {
     next(err)
   }

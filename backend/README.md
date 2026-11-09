@@ -3,34 +3,20 @@
 Node.js + Express REST API, backed by MySQL, following the structure from the
 backend blueprint (`config/ controllers/ routes/ models/ middleware/ services/`).
 
-## Setup
+## Setup outside Docker
 
-1. **Install MySQL 8** if you don't have it, then create the database and an app user:
+1. Connect to MySQL 8 as an administrator and create a database and app user:
    ```sql
-   CREATE DATABASE sentinelops_db;
-   CREATE USER 'sentinelops'@'localhost' IDENTIFIED BY 'your_password_here';
+   CREATE DATABASE IF NOT EXISTS sentinelops_db;
+   CREATE USER 'sentinelops'@'localhost' IDENTIFIED BY 'replace-with-a-random-password';
    GRANT ALL PRIVILEGES ON sentinelops_db.* TO 'sentinelops'@'localhost';
-   FLUSH PRIVILEGES;
    ```
-2. **Load the schema**:
-   ```bash
-   mysql -u sentinelops -p sentinelops_db < ../database/schema.sql
-   ```
-3. **Configure environment**: copy `.env.example` to `.env` and fill in your DB password and a
-   long random `JWT_SECRET`.
-4. **Install dependencies and seed demo data**:
-   ```bash
-   npm install
-   npm run seed
-   ```
-5. **Run the server**:
-   ```bash
-   npm run dev     # nodemon, auto-restarts on file changes
-   # or
-   npm start       # plain node
-   ```
-6. **Check it's alive**: open http://localhost:5000/api/status - you should see
-   `{"status":"SentinelOps Backend Running"}`.
+2. From the repository root, load `database/schema.sql` as the administrator, for example by running `source database/schema.sql` in the MySQL client.
+3. Copy `backend/.env.example` to `backend/.env`. Set the app database password and a random JWT secret. To create the first account, set both bootstrap values before startup.
+4. In `backend/`, run `npm ci` and `npm run dev`. Use `npm start` to start without the development watcher.
+5. Check `http://localhost:5000/api/ready` to verify the API can query MySQL.
+
+The optional `npm run seed` command replaces the data and user accounts. Use it only on a disposable demo database.
 
 ## Demo logins (after `npm run seed`)
 
@@ -44,12 +30,13 @@ backend blueprint (`config/ controllers/ routes/ models/ middleware/ services/`)
 
 ## API reference
 
-All routes except `/api/status` and `/api/auth/login` require
+All routes except `/api/status`, `/api/ready`, `/api/auth/login`, and the two agent-write routes require
 `Authorization: Bearer <token>`, issued by the login endpoint.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/api/status` | Health check |
+| GET | /api/status | Process health |
+| GET | /api/ready | Database readiness |
 | POST | `/api/auth/login` | `{ email, password }` -> `{ token, user }` |
 | GET | `/api/dashboard` | Summary counts + health breakdown + recent incidents |
 | GET | `/api/servers` | All 8 servers with their latest reading |
@@ -64,16 +51,13 @@ All routes except `/api/status` and `/api/auth/login` require
 | GET | `/api/users` | All DevOps engineers |
 | POST | `/api/users` | `{ name, email }` - adds a new engineer |
 | DELETE | `/api/users/:id` | Remove one |
-| GET | `/api/settings/thresholds` | Current CPU Warning/Critical + Memory Warning |
+| GET | `/api/settings/thresholds` | Warning and critical thresholds for CPU, memory, and disk |
 | PUT | `/api/settings/thresholds` | Update them |
-| POST | `/api/metrics` | `{ serverId, cpuUsage, memoryUsage, diskUsage }` - what the next-phase monitoring agent will call |
+| POST | `/api/metrics` | Legacy metric ingestion for demo inventory |
+| POST | `/api/monitor/heartbeat` | Per-host agent token and `X-Monitor-Host`; records live resource readings |
+| POST | `/api/monitor/probes` | PC 2 agent token; records API/MySQL observations |
+| GET | `/api/monitor/summary` | Live host and service status |
+| GET | `/api/monitor/events` | Latest incident and recovery events |
 | GET | `/api/metrics/series?range=24h\|7d` | Averaged history for the dashboard chart |
 
-## What's deliberately NOT here yet
-
-Automatic incident/alert creation from a *real*, continuously-running monitoring
-agent is the next phase (`monitoring-agent/`), per the blueprint's "Important
-Development Rule." `POST /api/metrics` exists and works today - it's the
-endpoint that agent will call - but nothing currently calls it on a schedule.
-Until then, `POST /api/servers/:id/simulate-failure` is the real, working stand-in
-used by the Infrastructure page's "Simulate Failure" button.
+See the [monitoring agent runbook](../monitoring-agent/README.md) for heartbeat timeouts, thresholds, recovery, and the two-PC setup.

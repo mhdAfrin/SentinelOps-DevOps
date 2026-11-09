@@ -4,18 +4,12 @@ import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import Logo from '../components/ui/Logo'
 import { useAuth } from '../context/AuthContext'
 
-// Every account is a DevOps Engineer - that is the only role SentinelOps has.
-const DEMO = [
-  { name: 'Dinuka Kavinda', email: 'devops@sentinelops.io', password: 'devops123' },
-  { name: 'Ishara Fernando', email: 'ishara@sentinelops.io', password: 'ishara123' },
-]
-
 export default function Login() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [email, setEmail] = useState(DEMO[0].email)
-  const [password, setPassword] = useState(DEMO[0].password)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -38,13 +32,12 @@ export default function Login() {
         <div className="login__pitch">
           <h1>Catch failures before your users do.</h1>
           <p>
-            SentinelOps watches your Web, API and Database servers, opens an incident the moment something looks
-            wrong, and gives your DevOps team one place to fix it.
+            View server health, track incidents, and manage alerts from one dashboard.
           </p>
         </div>
         <ul className="login__points">
-          <li>Live CPU and memory health for every server</li>
-          <li>Incidents created automatically from abnormal readings</li>
+          <li>CPU, memory, and disk metrics</li>
+          <li>Incident tracking and alert acknowledgement</li>
           <li>Add as many DevOps engineers to the team as you need</li>
         </ul>
       </aside>
@@ -99,26 +92,6 @@ export default function Login() {
           <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
-
-          <div className="demo">
-            <p>Demo DevOps engineer accounts (frontend only)</p>
-            <div className="demo__list">
-              {DEMO.map((d) => (
-                <button
-                  key={d.email}
-                  type="button"
-                  className="btn btn--sm"
-                  onClick={() => {
-                    setEmail(d.email)
-                    setPassword(d.password)
-                    setError('')
-                  }}
-                >
-                  {d.name}
-                </button>
-              ))}
-            </div>
-          </div>
         </form>
       </main>
     </div>

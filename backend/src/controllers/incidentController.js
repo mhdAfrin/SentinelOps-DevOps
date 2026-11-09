@@ -2,6 +2,8 @@ const incidentModel = require('../models/incidentModel')
 const serverModel = require('../models/serverModel')
 const { computeStatus } = require('../services/statusService')
 const settingsModel = require('../models/settingsModel')
+const { hasHost } = require('../services/monitorRules')
+const { investigateIncident } = require('../services/monitoring')
 
 // Task 10: GET/POST /api/incidents, PATCH /api/incidents/:id
 async function list(req, res, next) {
@@ -43,6 +45,12 @@ async function update(req, res, next) {
     const incident = await incidentModel.findById(req.params.id)
     if (!incident) return res.status(404).json({ success: false, error: `No incident "${req.params.id}".` })
 
+    if (incident.id.startsWith('MON-')) {
+      const updated = await investigateIncident(incident.id, { status, assigned_user })
+      if (!updated) return res.status(409).json({ error: 'Monitoring incidents resolve after confirmed recovery.' })
+      return res.json({ success: true })
+    }
+
     await incidentModel.update(req.params.id, { status, assigned_user })
 
     // Demo-friendly recovery: resolving an incident that was caused by the
@@ -50,7 +58,7 @@ async function update(req, res, next) {
     // there is no real monitoring agent yet to report a new, healthy reading.
     // Once the Monitoring Engine phase is wired up, real readings replace
     // this entirely.
-    if (status === 'Resolved' && incident.server_id) {
+    if (status === 'Resolved' && incident.server_id && !hasHost(incident.server_id)) {
       const server = await serverModel.findById(incident.server_id)
       if (server && Number(server.cpu_usage) >= 90) {
         const thresholds = await settingsModel.getThresholds()

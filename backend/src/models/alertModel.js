@@ -23,11 +23,11 @@ async function create({ id, type, message, source, severity, server_id }) {
 }
 
 async function acknowledge(id) {
-  await pool.query("UPDATE alerts SET status = 'Acknowledged' WHERE id = ?", [id])
+  await pool.query("UPDATE alerts SET status = 'Acknowledged' WHERE id = ? AND status = 'Active'", [id])
 }
 
 async function acknowledgeAll() {
-  await pool.query("UPDATE alerts SET status = 'Acknowledged' WHERE status != 'Acknowledged'")
+  await pool.query("UPDATE alerts SET status = 'Acknowledged' WHERE status = 'Active'")
 }
 
 module.exports = { findAll, nextId, create, acknowledge, acknowledgeAll }

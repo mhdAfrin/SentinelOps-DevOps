@@ -29,7 +29,7 @@ async function summary(req, res, next) {
       servers: servers.length,
       applications: applications.length,
       activeIncidents: incidents.filter((i) => i.status !== 'Resolved').length,
-      alerts: alerts.filter((a) => a.status !== 'Acknowledged').length,
+      alerts: alerts.filter((a) => a.status === 'Active').length,
       health: { ...health, total: servers.length, percent },
       recentIncidents: incidents.slice(0, 5),
     })

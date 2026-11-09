@@ -6,6 +6,7 @@ import StatCard from '../components/dashboard/StatCard'
 import HealthDonut from '../components/dashboard/HealthDonut'
 import SystemOverviewChart from '../components/dashboard/SystemOverviewChart'
 import RecentIncidents from '../components/dashboard/RecentIncidents'
+import MonitoringStatus from '../components/dashboard/MonitoringStatus'
 
 // Dashboard Module: Summary Cards, Infrastructure Health, System Performance
 // Graphs, Recent Incidents - exactly the four components in the v2 blueprint.
@@ -17,10 +18,13 @@ export default function Dashboard() {
   const date = now.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
-  const critical = health.critical + health.offline + apps.filter((a) => a.status === 'Down' || a.status === 'Critical').length
-  const warnings = health.warning
+  const critical = Math.max(health.critical + health.offline + apps.filter(app => ['Down', 'Critical'].includes(app.status)).length,
+    activeIncidents.filter(incident => incident.severity === 'Critical').length)
+  const warnings = Math.max(health.warning, activeIncidents.filter(incident => incident.severity === 'Warning').length)
   const overall =
-    critical > 0
+    servers.length === 0 && apps.length === 0 && activeIncidents.length === 0
+      ? { tone: 'warning', text: 'Waiting for monitoring data' }
+      : critical > 0
       ? { tone: 'critical', text: `${critical} critical ${critical === 1 ? 'issue needs' : 'issues need'} attention` }
       : warnings > 0
         ? { tone: 'warning', text: `${warnings} ${warnings === 1 ? 'warning' : 'warnings'} to review` }
@@ -45,16 +49,16 @@ export default function Dashboard() {
 
       <div className="grid">
         <div className="col-3">
-          <StatCard to="/infrastructure" icon={Server} label="Total Servers" value={servers.length} trend="down" good delta="Right-sized to 3 tiers" />
+          <StatCard to="/infrastructure" icon={Server} label="Total Servers" value={servers.length} />
         </div>
         <div className="col-3">
-          <StatCard to="/applications" icon={Boxes} label="Applications" value={apps.length} trend="up" good delta="+1 from last week" />
+          <StatCard to="/applications" icon={Boxes} label="Applications" value={apps.length} />
         </div>
         <div className="col-3">
-          <StatCard to="/incidents" icon={Siren} tone="red" label="Active Incidents" value={activeIncidents.length} trend="down" good delta="-2 from yesterday" />
+          <StatCard to="/incidents" icon={Siren} tone="red" label="Active Incidents" value={activeIncidents.length} />
         </div>
         <div className="col-3">
-          <StatCard to="/alerts" icon={Bell} label="Open Alerts" value={openAlerts.length} trend="up" good={false} delta="+3 from yesterday" />
+          <StatCard to="/alerts" icon={Bell} label="Open Alerts" value={openAlerts.length} />
         </div>
 
         <div className="col-5">
@@ -63,6 +67,8 @@ export default function Dashboard() {
         <div className="col-7">
           <SystemOverviewChart />
         </div>
+
+        <MonitoringStatus />
 
         <div className="col-12">
           <RecentIncidents incidents={incidents} />

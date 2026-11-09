@@ -5,12 +5,12 @@ const userModel = require('../models/userModel')
 // Task 6: POST /api/auth/login
 async function login(req, res, next) {
   try {
-    const { email, password } = req.body
-    if (!email || !password) {
+    const { email, password } = req.body ?? {}
+    if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
       return res.status(400).json({ success: false, error: 'Email and password are required.' })
     }
 
-    const user = await userModel.findByEmail(String(email).trim().toLowerCase())
+    const user = await userModel.findByEmail(email.trim().toLowerCase())
     if (!user) return res.status(401).json({ success: false, error: 'Email or password is incorrect.' })
 
     const match = await bcrypt.compare(password, user.password)
